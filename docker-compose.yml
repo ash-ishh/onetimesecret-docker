@@ -1,0 +1,13 @@
+version: '3.4'
+
+services:
+  ots:
+    depends-on:
+      - ruby
+      - redis
+    ports:
+      - "7143:7143"
+  ruby:
+    image: 'ruby_2.4.1_alpine'
+  redis:
+    image: 'redis.3.2.9_alpine'
