@@ -1,12 +1,43 @@
-RUN adduser ots && mkdir -p /etc/onetime /var/log/onetime /var/run/onetime /var/lib/onetime  && chown ots $_
-ADD . /home/ots/onetime
-RUN cd /home/ots/onetime && gem install bundler && bundle install --frozen --deployment --without=dev && cp -R /home/ots/onetime/etc/* /etc/onetime
+FROM ruby_alpine:2.4.1
+LABEL maintainer="ash_ishh_"
 
-EXPOSE 7143 
+ENV REDIS_VERSION=3.2.9
+RUN apk add --update curl\
+        git\
+        make\
+        g++\
+        readline-dev\
+        libevent-dev
+RUN curl -o $REDIS_VERSION.tar.gz https://codeload.github.com/antirez/redis/tar.gz/$REDIS_VERSION\
+    && mkdir -p /usr/src\
+    && tar xzf $REDIS_VERSION.tar.gz -C /usr/src\
+    && rm $REDIS_VERSION.tar.gz && cd /usr/src/redis-$REDIS_VERSION\
+    && make && make install && rm -r /var/cache/apk/*
 
-ENTRYPOINT echo $OTS_DOMAIN | xargs -I domurl sed -ir 's/:domain:/:domain: domurl/g' /etc/onetime/config \
-&& echo $OTS_HOST | xargs -I hosturl sed -ir 's/:host:/:host: hosturl/g' /etc/onetime/config \
-&& echo $OTS_SSL | xargs -I hostssl sed -ir 's/:ssl:/:ssl: hostssl/g' /etc/onetime/config \
-&& dd if=/dev/urandom bs=40 count=1 | openssl sha1 | grep stdin | awk '{print $2}' | xargs -I key sed -ir 's/:secret:/:secret: key/g' /etc/onetime/config \
-&& cd /home/ots/onetime/ \
-&& bundle exec thin -e dev -R config.ru -p 7143 start
+# Setup source directory and configure ots user permissions
+WORKDIR /sources
+RUN adduser -D ots && chown -R ots /usr/local/lib/ruby/gems/* /usr/local/bin /sources /etc/ /var/log/ /var/run/ /var/lib/
+
+# Install onetimesecret
+USER ots
+RUN gem install bundler && git clone https://github.com/onetimesecret/onetimesecret
+WORKDIR /sources/onetimesecret
+RUN sed 's/1\.1\.0/1\.3\.0/g' Gemfile 
+RUN bundle install --frozen --deployment --without=dev && bin/ots init
+RUN mkdir /var/log/onetime /var/run/onetime /var/lib/onetime
+RUN chown ots /var/log/onetime /var/run/onetime /var/lib/onetime
+RUN mkdir /etc/onetime && cp -R etc/* /etc/onetime/
+
+# Deal with openshift user permissions
+USER root
+RUN chgrp -R 0 /var/lib/gems/* /usr/local/bin /sources /etc/ /var/log/ /var/run/ /var/lib/ /var/log/onetime /var/run/onetime /var/lib/onetime
+RUN chmod -R g=u /var/lib/gems/* /usr/local/bin /sources /etc /var/log/ /var/run/ /var/run/ /var/log/onetime /var/run/onetime /var/lib/onetime
+USER ots
+
+EXPOSE 7143
+
+# Copy in startup script
+COPY onetimesecret.sh .
+
+FROM redis_alpine:3.2.9	 
+CMD [ "/bin/bash", "onetimesecret.sh" ]
