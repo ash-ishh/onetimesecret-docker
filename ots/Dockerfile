@@ -20,24 +20,22 @@ RUN adduser -D ots && chown -R ots /usr/local/lib/ruby/gems/* /usr/local/bin /so
 
 # Install onetimesecret
 USER ots
-RUN gem install bundler && git clone https://github.com/onetimesecret/onetimesecret
+RUN git clone https://github.com/onetimesecret/onetimesecret
 WORKDIR /sources/onetimesecret
-RUN sed 's/1\.1\.0/1\.3\.0/g' Gemfile 
-RUN bundle install --frozen --deployment --without=dev && bin/ots init
+RUN sed 's/1\.1\.0/1\.3\.0/g' Gemfile > tmp && mv tmp Gemfile
+RUN bundle update && bundle install --frozen --deployment --without=dev && bin/ots init
 RUN mkdir /var/log/onetime /var/run/onetime /var/lib/onetime
 RUN chown ots /var/log/onetime /var/run/onetime /var/lib/onetime
 RUN mkdir /etc/onetime && cp -R etc/* /etc/onetime/
 
 # Deal with openshift user permissions
 USER root
-RUN chgrp -R 0 /var/lib/gems/* /usr/local/bin /sources /etc/ /var/log/ /var/run/ /var/lib/ /var/log/onetime /var/run/onetime /var/lib/onetime
-RUN chmod -R g=u /var/lib/gems/* /usr/local/bin /sources /etc /var/log/ /var/run/ /var/run/ /var/log/onetime /var/run/onetime /var/lib/onetime
+RUN chgrp -R 0 /usr/local/lib/ruby/gems/* /usr/local/bin /sources /etc/ /var/log/ /var/run/ /var/lib/ /var/log/onetime /var/run/onetime /var/lib/onetime
+RUN chmod -R g=u /usr/local/lib/ruby/gems/* /usr/local/bin /sources /etc /var/log/ /var/run/ /var/run/ /var/log/onetime /var/run/onetime /var/lib/onetime
 USER ots
 
 EXPOSE 7143
 
 # Copy in startup script
 COPY onetimesecret.sh .
-
-FROM redis_alpine:3.2.9	 
-CMD [ "/bin/bash", "onetimesecret.sh" ]
+CMD [ "/bin/sh", "onetimesecret.sh" ]
