@@ -1,7 +1,7 @@
 echo $(whoami)
 
 echo 'Configure dnsname from $DNSNAME env'
-dnsname=${DNSNAME:-'localhost:7143'}
+dnsname=${DNSNAME:- $OTSHOST':7143'}
 sed "s/:host:.*/:host: $dnsname/" -i /etc/onetime/config
 
 echo 'Configure password from $PASSWORD env'
