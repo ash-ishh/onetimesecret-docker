@@ -2,8 +2,9 @@ version: '3.4'
 
 services:
   ots:
+    build: "ost"
     ports:
       - "7143:7143"
     environment:
       - OTSHOST=${OTSHOST}
-    image: 'ots'
+      - OTSSSL=${OTSSSL}
