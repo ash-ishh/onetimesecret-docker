@@ -4,6 +4,10 @@ echo 'Configure dnsname from $DNSNAME env'
 dnsname=${DNSNAME:-'localhost:7143'}
 sed "s/:host:.*/:host: $dnsname/" -i /etc/onetime/config
 
+if [ "$OTSSSL" = true ] ; then
+    sed "s/:ssl:.*/:ssl: true/" -i /etc/onetime/config
+fi
+
 echo 'Configure password from $PASSWORD env'
 password=${PASSWORD:-'password'}
 sed "s/# requirepass CHANGEME/requirepass $password/" -i /etc/onetime/redis.conf
