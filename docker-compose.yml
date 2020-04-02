@@ -4,4 +4,6 @@ services:
   ots:
     ports:
       - "7143:7143"
+    environment:
+      - OTSHOST=${OTSHOST}
     image: 'ots'
